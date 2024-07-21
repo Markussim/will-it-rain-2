@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "dev": "cross-env DEV=true node index.js"
   },
@@ -10,7 +11,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "aws-sdk": "^2.1613.0",
+    "@aws-sdk/client-dynamodb": "^3.616.0",
+    "@aws-sdk/client-secrets-manager": "^3.616.0",
     "axios": "^1.6.8",
     "openai": "^4.40.2"
   },

@@ -1,26 +1,37 @@
-const axios = require("axios");
-const OpenAI = require("openai");
-const aws = require("aws-sdk");
+import axios from "axios";
+import OpenAI from "openai";
+import {
+  SecretsManager,
+  GetSecretValueCommand,
+} from "@aws-sdk/client-secrets-manager";
+import {
+  DynamoDBClient,
+  PutItemCommand,
+  ScanCommand,
+} from "@aws-sdk/client-dynamodb";
 
 // Get token from AWS Secrets Manager
 const secretName = "will-it-rain-2";
 const region = "eu-north-1";
 
-const client = new aws.SecretsManager({
+const client = new SecretsManager({
   region: region,
 });
 
-const db = new aws.DynamoDB.DocumentClient({
+const db = new DynamoDBClient({
   region: region,
 });
 
 const dev = process.env.DEV === "true";
 
-exports.handler = async (event) => {
+const command = new GetSecretValueCommand({ SecretId: secretName });
+
+export const handler = async (event) => {
   // Sends webhook to Discord
   // Read secret.WEBHOOK_DEV/WEBHOOK_PROD from AWS Secrets Manager
   const webhookSecretName = dev ? "WEBHOOK_DEV" : "WEBHOOK_PROD";
-  const data = await client.getSecretValue({ SecretId: secretName }).promise();
+
+  const data = await client.send(command);
 
   const url = JSON.parse(data.SecretString)[webhookSecretName];
 
@@ -87,7 +98,7 @@ function IsoToSwe(isoDate) {
 }
 
 async function openai(weatherString) {
-  const data = await client.getSecretValue({ SecretId: secretName }).promise();
+  const data = await client.send(command);
 
   const token = JSON.parse(data.SecretString).OPEN_AI_KEY;
 
@@ -118,20 +129,24 @@ async function openai(weatherString) {
   let history = [];
 
   for (let i = 0; i < rawHistory.length; i++) {
+    let message;
+
     message = {
       role: "user",
-      content: rawHistory[i].data,
+      content: rawHistory[i].data.S,
     };
 
     history.push(message);
 
     message = {
       role: "assistant",
-      content: rawHistory[i].result,
+      content: rawHistory[i].result.S,
     };
 
     history.push(message);
   }
+
+  console.log(rawHistory.length);
 
   const chatCompletion = await openai.chat.completions.create({
     model: "gpt-4o",
@@ -145,29 +160,24 @@ async function openai(weatherString) {
   return chatCompletion.choices[0].message.content;
 }
 
-// Test locally
-if (dev) {
-  (async () => {
-    exports.handler();
-  })();
-}
-
 const devTable = "will-it-rain-dev";
 const prodTable = "will-it-rain-prod";
 
 async function writeToDb(data, result) {
-  const now = new Date().getTime();
+  const now = new Date().getTime().toString();
 
   const params = {
     TableName: dev ? devTable : prodTable,
     Item: {
-      id: now,
-      data: data,
-      result: result,
+      id: { N: now },
+      data: { S: data },
+      result: { S: result },
     },
   };
 
-  await db.put(params).promise();
+  const command = new PutItemCommand(params);
+
+  await db.send(command);
 }
 
 async function readFromDb() {
@@ -175,7 +185,24 @@ async function readFromDb() {
     TableName: dev ? devTable : prodTable,
   };
 
-  const data = await db.scan(params).promise();
+  const command = new ScanCommand(params);
+
+  const data = await db.send(command);
+
+  // Sort by id
+  data.Items.sort((a, b) => {
+    return a.id.N - b.id.N;
+  });
+
+  // Get the last 7 items
+  if (data.Items.length > 7) {
+    data.Items = data.Items.slice(data.Items.length - 7);
+  }
 
   return data.Items;
+}
+
+// Test locally
+if (dev) {
+  await handler();
 }
