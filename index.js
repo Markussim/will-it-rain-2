@@ -10,6 +10,10 @@ const client = new aws.SecretsManager({
   region: region,
 });
 
+const db = new aws.DynamoDB.DocumentClient({
+  region: region,
+});
+
 const dev = process.env.DEV === "true";
 
 exports.handler = async (event) => {
@@ -25,9 +29,9 @@ exports.handler = async (event) => {
   let formattedWeather = "";
 
   for (let i = 0; i < 24; i++) {
-    formattedWeather += `${IsoToSwe(weatherArray[i].date)}: ${
+    formattedWeather += `${IsoToSwe(weatherArray[i].date)} temp: ${
       weatherArray[i].temperature
-    }°C\n`;
+    }°C, rain: ${weatherArray[i].rain} mm\n`;
   }
 
   const toTag = dev
@@ -60,9 +64,14 @@ async function getWeather() {
       (parameter) => parameter.name === "t"
     );
 
+    let rain = response.data.timeSeries[i].parameters.find(
+      (parameter) => parameter.name === "pmean"
+    );
+
     const weatherData = {
       date: response.data.timeSeries[i].validTime,
       temperature: temperature.values[0].toFixed(1),
+      rain: rain.values[0],
     };
 
     weatherArray.push(weatherData);
@@ -86,33 +95,87 @@ async function openai(weatherString) {
     apiKey: token,
   });
 
-  const prompt = `Use this data to create a short summary (About 2 sentences) for the weather in swedish:
-  ${weatherString}
+  const promptString = `Use this data to create a short summary for the weather in swedish for Gothenburg. Include a bit of humor and emojis in the summary. Do not repeat yourself, but mention previous days if there are any. (Always mention the current day and the temperature in Celsius)`;
 
-  Include a bit of humor in the summary. It is currently ${new Date().toLocaleString(
-    "sv-SE",
-    { timeZone: "Europe/Stockholm" }
-  )}, so the data is for today.
-  `;
+  const weatherDataString =
+    weatherString +
+    `It is currently ${new Date().toLocaleString("sv-SE", {
+      timeZone: "Europe/Stockholm",
+    })}.`;
 
-  console.log(prompt);
-
-  const message = {
-    role: "user",
-    content: prompt,
+  const promptMessage = {
+    role: "system",
+    content: promptString,
   };
+
+  const weatherMessage = {
+    role: "system",
+    content: weatherDataString,
+  };
+
+  const rawHistory = await readFromDb();
+
+  let history = [];
+
+  for (let i = 0; i < rawHistory.length; i++) {
+    message = {
+      role: "user",
+      content: rawHistory[i].data,
+    };
+
+    history.push(message);
+
+    message = {
+      role: "assistant",
+      content: rawHistory[i].result,
+    };
+
+    history.push(message);
+  }
 
   const chatCompletion = await openai.chat.completions.create({
     model: "gpt-4o",
-    messages: [message],
+    messages: [promptMessage, ...history, weatherMessage],
   });
 
   console.log(chatCompletion.choices[0].message.content);
+
+  await writeToDb(weatherDataString, chatCompletion.choices[0].message.content);
 
   return chatCompletion.choices[0].message.content;
 }
 
 // Test locally
 if (dev) {
-  exports.handler();
+  (async () => {
+    exports.handler();
+  })();
+}
+
+const devTable = "will-it-rain-dev";
+const prodTable = "will-it-rain-prod";
+
+async function writeToDb(data, result) {
+  const now = new Date().getTime();
+
+  const params = {
+    TableName: dev ? devTable : prodTable,
+    Item: {
+      id: now,
+      data: data,
+      result: result,
+    },
+  };
+
+  await db.put(params).promise();
+}
+
+async function readFromDb() {
+  const params = {
+    TableName: dev ? devTable : prodTable,
+  };
+
+  const data = await db.scan(params).promise();
+
+  return data.Items;
 }
