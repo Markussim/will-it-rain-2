@@ -111,3 +111,8 @@ async function openai(weatherString) {
 
   return chatCompletion.choices[0].message.content;
 }
+
+// Test locally
+if (dev) {
+  exports.handler();
+}

@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "cross-env DEV=true node index.js"
   },
   "keywords": [],
   "author": "",
@@ -13,5 +13,8 @@
     "aws-sdk": "^2.1613.0",
     "axios": "^1.6.8",
     "openai": "^4.40.2"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3"
   }
 }
