@@ -144,7 +144,7 @@ async function openai(weatherString) {
 
   const weatherDataString =
     weatherString +
-    ` It is currently ${new Date().toLocaleString("sv-SE", {
+    `\n\nIt is currently ${new Date().toLocaleString("sv-SE", {
       timeZone: "Europe/Stockholm",
     })}.`;
 
