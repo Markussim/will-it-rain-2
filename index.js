@@ -44,6 +44,10 @@ export const handler = async (event) => {
       date: IsoToSwe(weatherArray[i].date),
       temperature: weatherArray[i].temperature,
       rain: weatherArray[i].rain,
+      precipitationCategory: weatherArray[i].precipitationCategory,
+      cloudCover: weatherArray[i].cloudCover,
+      windSpeed: weatherArray[i].windSpeed,
+      windDirection: weatherArray[i].windDirection,
     });
   }
 
@@ -85,10 +89,34 @@ async function getWeather() {
       (parameter) => parameter.name === "pmean"
     );
 
+    const precipitationCategory = new Map([
+      [0, "No precipitation"],
+      [1, "Snow"],
+      [2, "Snow and rain"],
+      [3, "Rain"],
+      [4, "Drizzle"],
+      [5, "Freezing rain"],
+      [6, "Freezing drizzle"],
+    ]);
+
+    const pcat = response.data.timeSeries[i].parameters.find(
+      (parameter) => parameter.name === "pcat"
+    );
+
     const weatherData = {
       date: response.data.timeSeries[i].validTime,
       temperature: temperature.values[0].toFixed(1),
       rain: rain.values[0],
+      precipitationCategory: precipitationCategory.get(pcat.values[0]),
+      cloudCover: response.data.timeSeries[i].parameters.find(
+        (parameter) => parameter.name === "tcc_mean"
+      ).values[0],
+      windSpeed: response.data.timeSeries[i].parameters.find(
+        (parameter) => parameter.name === "ws"
+      ).values[0],
+      windDirection: response.data.timeSeries[i].parameters.find(
+        (parameter) => parameter.name === "wd"
+      ).values[0],
     };
 
     weatherArray.push(weatherData);
@@ -112,7 +140,7 @@ async function openai(weatherString) {
     apiKey: token,
   });
 
-  const promptString = `Use this data to create a short summary for the weather in swedish for Gothenburg. Include a bit of humor and emojis in the summary. Do not repeat yourself, but mention previous days if there are any. (Always mention the current day and the temperature in Celsius)`;
+  const promptString = `Use this data to create a short summary for the weather in swedish for Gothenburg. Include a bit of humor and emojis in the summary. Do not repeat yourself, but mention previous days if there are any. (Always mention the date and the temperature in Celsius)`;
 
   const weatherDataString =
     weatherString +
