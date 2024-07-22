@@ -37,13 +37,19 @@ export const handler = async (event) => {
 
   let weatherArray = await getWeather();
 
-  let formattedWeather = "";
+  let weatherJson = [];
 
   for (let i = 0; i < 24; i++) {
-    formattedWeather += `${IsoToSwe(weatherArray[i].date)} temp: ${
-      weatherArray[i].temperature
-    }°C, rain: ${weatherArray[i].rain} mm\n`;
+    weatherJson.push({
+      date: IsoToSwe(weatherArray[i].date),
+      temperature: weatherArray[i].temperature,
+      rain: weatherArray[i].rain,
+    });
   }
+
+  let formattedWeather = JSON.stringify(weatherJson);
+
+  console.log(weatherJson);
 
   const toTag = dev
     ? JSON.parse(data.SecretString).TO_TAG_DEV
@@ -110,7 +116,7 @@ async function openai(weatherString) {
 
   const weatherDataString =
     weatherString +
-    `It is currently ${new Date().toLocaleString("sv-SE", {
+    ` It is currently ${new Date().toLocaleString("sv-SE", {
       timeZone: "Europe/Stockholm",
     })}.`;
 
