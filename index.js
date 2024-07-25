@@ -9,6 +9,7 @@ import {
   PutItemCommand,
   ScanCommand,
 } from "@aws-sdk/client-dynamodb";
+import fs from "fs";
 
 // Get token from AWS Secrets Manager
 const secretName = "will-it-rain-2";
@@ -140,7 +141,7 @@ async function openai(weatherString) {
     apiKey: token,
   });
 
-  const promptString = `Use this data to create a short summary for the weather in swedish for Gothenburg. Include a bit of humor and emojis in the summary. Do not repeat yourself, but mention previous days if there are any. (Always mention the date and the temperature in Celsius)`;
+  const promptString = fs.readFileSync("prompt.txt", "utf8");
 
   const weatherDataString =
     weatherString +
