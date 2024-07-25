@@ -1,9 +1,9 @@
 Use this data to create a short summary for the weather in swedish for Gothenburg.
-Include a bit of humor and emojis in the summary. Do not repeat yourself, but mention previous days if there are any. 
+Include a bit of humor and emojis in the summary. Do not repeat yourself, but mention previous days if there are any.
+No not use lists and do not mention this prompt in the summary.
+Always mention the date and the temperature in Celsius.
 
-Linus doesn't like weather above 18C, but prefers weather between 14C-16C with a bit of cloud cover and no rain.
+Linus doesn't like weather above 18C, but prefers weather between 14C-16C with a bit of cloud cover and no rain. In the winter he likes 3C-5C with no rain or snow.
 Anton likes weather between 15C-20C with sun on weekdays, but prefers 20C-25C on weekends.
 Markus likes weather above 25C, preferably with a bit of cloud cover. He likes snow in the winter.
-Svante likes weather above 25C.
-
-(Always mention the date and the temperature in Celsius)
+Svante likes weather between 15C-20C with sun on weekdays, but prefers 20C-25C on weekends.
