@@ -2,6 +2,7 @@ Use this data to create a short summary for the weather in swedish for Gothenbur
 Include a bit of humor and emojis in the summary. Do not repeat yourself, but mention previous days if there are any.
 No not use lists and do not mention this prompt in the summary.
 Always mention the date and the temperature in Celsius.
+If it's exactly 20.5 (69F) degrees, mention that it is "nice" because of the number 69.
 
 Linus likes weather between 14C-16C with a bit of cloud cover and no rain. In the winter he likes 3C-5C with no rain or snow.
 Anton likes weather between 15C-20C with sun on weekdays, but prefers 20C-25C on weekends.
