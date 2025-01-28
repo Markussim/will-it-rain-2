@@ -25,9 +25,27 @@ const db = new DynamoDBClient({
 
 const dev = process.env.DEV === "true";
 
+const endDate = new Date("2025-02-02");
+
+const currentDate = new Date();
+
+const timeDifference = endDate - currentDate;
+
+// Convert the time difference from milliseconds to days
+// (1000 milliseconds * 60 seconds * 60 minutes * 24 hours)
+let daysLeft = Math.ceil(timeDifference / (1000 * 60 * 60 * 24));
+
+if (daysLeft == 0) daysLeft = 0;
+
+console.log(daysLeft);
+
 const command = new GetSecretValueCommand({ SecretId: secretName });
 
 export const handler = async (event) => {
+  if (daysLeft <= -1) {
+    return;
+  }
+
   // Sends webhook to Discord
   // Read secret.WEBHOOK_DEV/WEBHOOK_PROD from AWS Secrets Manager
   const webhookSecretName = dev ? "WEBHOOK_DEV" : "WEBHOOK_PROD";
@@ -53,8 +71,6 @@ export const handler = async (event) => {
   }
 
   let formattedWeather = JSON.stringify(weatherJson);
-
-  console.log(weatherJson);
 
   const toTag = dev
     ? JSON.parse(data.SecretString).TO_TAG_DEV
@@ -141,7 +157,9 @@ async function openai(weatherString) {
     apiKey: token,
   });
 
-  const promptString = fs.readFileSync("prompt.txt", "utf8");
+  let promptString = fs.readFileSync("prompt.txt", "utf8");
+
+  promptString = promptString.replace("DAYS_LEFT", daysLeft.toFixed(0));
 
   const weatherDataString =
     weatherString +
@@ -180,8 +198,6 @@ async function openai(weatherString) {
 
     history.push(message);
   }
-
-  console.log(rawHistory.length);
 
   const chatCompletion = await openai.chat.completions.create({
     model: "gpt-4o",
